@@ -273,7 +273,7 @@ func (generator *Generator) Run() {
 
 	// Build and serve OpenAPI 3.0 spec (only when enabled)
 	if generator.EnableOpenAPI {
-		spec := generator.buildOpenAPISpec("Muta Alim API", "1.0.0")
+		spec := generator.buildOpenAPISpec("theGHub1 API", "1.0")
 		specJSON, err := json.MarshalIndent(spec, "", "  ")
 		if err != nil {
 			panic(fmt.Sprintf("failed to marshal OpenAPI spec: %v", err))
