@@ -41,6 +41,9 @@ type Generator struct {
 	GroupTitles          map[string]string
 	ViewAdapters         map[string]string
 	IconMap              map[string]string
+	// Global hooks for all actions
+	GlobalBeforeAction   func(c *gin.Context, module *BaseModule, action actions.ModuleAction) error
+	GlobalAfterAction    func(c *gin.Context, module *BaseModule, action actions.ModuleAction)
 }
 
 func NewGenerator(
@@ -567,6 +570,16 @@ func (generator *Generator) actionAdd(module *BaseModule, action actions.AddModu
 			}
 		}()
 
+		// Global before hook
+		if generator.GlobalBeforeAction != nil {
+			if err := generator.GlobalBeforeAction(c, module, action); err != nil {
+				response.ErrorResponse(l, c, http.StatusBadRequest, GeneratorErrorAdd, []string{
+					err.Error(),
+				})
+				return
+			}
+		}
+
 		err := action.BeforeRequest(c)
 		if err != nil {
 			response.ErrorResponse(l, c, http.StatusBadRequest, GeneratorErrorAdd, []string{
@@ -860,6 +873,14 @@ func (generator *Generator) actionUpdate(module *BaseModule, action actions.Upda
 			}
 		}()
 
+		// Global before hook
+		if generator.GlobalBeforeAction != nil {
+			if err := generator.GlobalBeforeAction(c, module, action); err != nil {
+				response.ErrorResponse(l, c, http.StatusBadRequest, GeneratorErrorUpdate, nil)
+				return
+			}
+		}
+
 		err := action.BeforeRequest(c)
 		if err != nil {
 			response.ErrorResponse(l, c, http.StatusBadRequest, GeneratorErrorUpdate, nil)
@@ -964,6 +985,11 @@ func (generator *Generator) actionUpdate(module *BaseModule, action actions.Upda
 		response.Response(l, c, fallbackResult)
 
 		action.AfterRequest(c)
+
+		// Global after hook
+		if generator.GlobalAfterAction != nil {
+			generator.GlobalAfterAction(c, module, action)
+		}
 	}
 }
 
@@ -984,6 +1010,14 @@ func (generator *Generator) actionDelete(module *BaseModule, action actions.Dele
 				hook(c)
 			}
 		}()
+
+		// Global before hook
+		if generator.GlobalBeforeAction != nil {
+			if err := generator.GlobalBeforeAction(c, module, action); err != nil {
+				response.ErrorResponse(l, c, http.StatusBadRequest, GeneratorErrorDelete, nil)
+				return
+			}
+		}
 
 		err := action.BeforeRequest(c)
 		if err != nil {
@@ -1037,5 +1071,10 @@ func (generator *Generator) actionDelete(module *BaseModule, action actions.Dele
 		response.Response(l, c, output)
 
 		action.AfterRequest(c)
+
+		// Global after hook
+		if generator.GlobalAfterAction != nil {
+			generator.GlobalAfterAction(c, module, action)
+		}
 	}
 }
