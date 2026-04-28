@@ -135,6 +135,9 @@ func (generator *Generator) buildOpenAPISpec(title, version string) OpenAPISpec 
 		generator.buildModulePaths(&spec, mod)
 	}
 
+	generator.buildFeaturesPath(&spec)
+	generator.buildConfigPath(&spec)
+
 	return spec
 }
 
@@ -640,4 +643,74 @@ func getOrCreatePathItem(spec *OpenAPISpec, path string) OpenAPIPathItem {
 		return existing
 	}
 	return OpenAPIPathItem{}
+}
+
+func (generator *Generator) buildFeaturesPath(spec *OpenAPISpec) {
+	path := "/api/features"
+	spec.Components.Schemas["FeaturesResponse"] = OpenAPISchema{
+		Type: "object",
+		Properties: map[string]*OpenAPISchema{
+			"modules": {
+				Type: "array",
+				Items: &OpenAPISchema{
+					Type: "object",
+					Properties: map[string]*OpenAPISchema{
+						"module_name": {Type: "string"},
+						"actions": {Type: "object"},
+					},
+				},
+			},
+		},
+	}
+	op := &OpenAPIOperation{
+		Tags:        []string{"system"},
+		Summary:     "Get available modules and actions",
+		OperationID: "get_features",
+		Responses: map[string]OpenAPIResponse{
+			"200": {
+				Description: "List of modules with actions",
+				Content: map[string]OpenAPIMediaType{
+					"application/json": {Schema: &OpenAPISchema{Ref: "#/components/schemas/FeaturesResponse"}},
+				},
+			},
+		},
+	}
+	pathItem := getOrCreatePathItem(spec, path)
+	pathItem.Get = op
+	spec.Paths[path] = pathItem
+}
+
+func (generator *Generator) buildConfigPath(spec *OpenAPISpec) {
+	path := "/api/config"
+	spec.Components.Schemas["ConfigResponse"] = OpenAPISchema{
+		Type: "object",
+		Properties: map[string]*OpenAPISchema{
+			"left_menu": {Type: "array", Items: &OpenAPISchema{Type: "object"}},
+			"routes": {Type: "object"},
+			"role": {Type: "string"},
+		},
+	}
+	op := &OpenAPIOperation{
+		Tags:        []string{"system"},
+		Summary:     "Get configuration for webapp",
+		OperationID: "get_config",
+		Security:    []map[string][]string{{"bearerAuth": {}}},
+		Responses: map[string]OpenAPIResponse{
+			"200": {
+				Description: "Configuration object",
+				Content: map[string]OpenAPIMediaType{
+					"application/json": {Schema: &OpenAPISchema{Ref: "#/components/schemas/ConfigResponse"}},
+				},
+			},
+			"401": {
+				Description: "Unauthorized",
+				Content: map[string]OpenAPIMediaType{
+					"application/json": {Schema: &OpenAPISchema{Ref: "#/components/schemas/ErrorResponse"}},
+				},
+			},
+		},
+	}
+	pathItem := getOrCreatePathItem(spec, path)
+	pathItem.Get = op
+	spec.Paths[path] = pathItem
 }
