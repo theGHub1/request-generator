@@ -290,7 +290,13 @@ func (generator *Generator) Run() {
 
 func (generator *Generator) actionList(module *BaseModule, action actions.ListModuleAction) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		defer action.AfterRequest(c)
+		defer func() {
+			action.AfterRequest(c)
+			// Global after hook
+			if generator.GlobalAfterAction != nil {
+				generator.GlobalAfterAction(c, module, action)
+			}
+		}()
 
 		ctx := c.Request.Context()
 		l, _ := icontext.GetLogger(ctx)
